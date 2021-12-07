@@ -35,6 +35,12 @@ fn main() {
           Arg::with_name("day")
             .help("The number of the day you want to run")
             .takes_value(true),
+        )
+        .arg(
+          Arg::with_name("all")
+            .short("a")
+            .long("all")
+            .help("Downloads input for all days sequentially"),
         ),
     ])
     .get_matches();
@@ -44,23 +50,27 @@ fn main() {
       run_all_days();
     } else {
       match matches.value_of("day") {
-        Some(day) => run_day(day),
+        Some(day) => run_day(parse_day(day)),
         None => {
           println!("No day parameter specified, attempting to run today");
           let now_day = get_today();
           println!("Running day {}", now_day);
-          run_day(&format!("{}", now_day));
+          run_day(now_day);
         }
       }
     }
   } else if let Some(matches) = matches.subcommand_matches("get-input") {
-    match matches.value_of("day") {
-      Some(day) => download_input(day),
-      None => {
-        println!("No day parameter specified, attempting to download today's input");
-        let now_day = get_today();
-        println!("Getting input for day {}", now_day);
-        download_input(&format!("{}", now_day));
+    if matches.is_present("all") {
+      download_all_input();
+    } else {
+      match matches.value_of("day") {
+        Some(day) => download_input(parse_day(day)),
+        None => {
+          println!("No day parameter specified, attempting to download today's input");
+          let now_day = get_today();
+          println!("Getting input for day {}", now_day);
+          download_input(now_day);
+        }
       }
     }
   }
@@ -92,15 +102,10 @@ fn parse_day(day: &str) -> usize {
 }
 
 fn run_all_days() {
-  (1..26).map(run_day_helper).collect()
+  (1..=25).map(run_day).collect()
 }
-
-fn run_day(day: &str) {
-  run_day_helper(parse_day(day))
-}
-
 // Panics if you provide a value outside the range of 1 to 25
-fn run_day_helper(day: usize) {
+fn run_day(day: usize) {
   println!("======== DAY {} ========", day);
   // I'd like to do this with a macro, but I'm not sure how to do it.
   let input_fp = &format!("inputs/day{:02}.txt", day);
@@ -134,10 +139,13 @@ fn run_day_helper(day: usize) {
   }
 }
 
-fn download_input(day: &str) {
+fn download_all_input() {
+  (1..=25).map(download_input).collect()
+}
+
+fn download_input(day: usize) {
   // Read session cookie from .session file
   let session = fs::read_to_string(".session").expect("Could not find .session file");
-  let day = parse_day(day);
   let url = format!("https://adventofcode.com/{}/day/{}/input", YEAR, day);
   let client = reqwest::blocking::Client::new();
   let response = client
@@ -154,6 +162,8 @@ fn download_input(day: &str) {
     fs::write(&path, text).unwrap();
     println!("Successfully downloaded input to {}", &path);
   } else {
-    panic!("Could not get input. Is your correct session cookie in your .session file?")
+    panic!("Could not get input for day {}. Is your correct session cookie in your .session file?", day)
   }
 }
+
+
