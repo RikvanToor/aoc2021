@@ -1,4 +1,3 @@
-use std::ptr::hash;
 use nom::bytes::complete::tag;
 use nom::character::complete::{alpha1, newline};
 use nom::multi::separated_list0;
@@ -12,30 +11,40 @@ pub struct Day12;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Cave {
-  Small(String),
-  Big(String),
+  Small(u32),
+  Big(u32),
   Start,
   End,
 }
 
-fn str_to_cave(input: &str) -> Cave {
+fn str_to_cave<'a>(keys_map: &mut HashMap<&'a str, u32>, max_value: &mut u32, input: &'a str) -> Cave {
   use Cave::*;
   match input {
     "start" => Start,
     "end" => End,
     _ => {
-      if input.chars().next().unwrap().is_lowercase() {
-        Small(input.to_owned())
+      let is_small = input.chars().next().unwrap().is_lowercase();
+      let key = match keys_map.get(input) {
+        Some(k) => *k,
+        None => {
+          *max_value <<= 1;
+          let key = *max_value + if is_small { 1 } else { 0 };
+          keys_map.insert(input, key);
+          key
+        }
+      };
+      if is_small {
+        Small(key)
       } else {
-        Big(input.to_owned())
+        Big(key)
       }
     }
   }
 }
 
-fn parse_line(input: &str) -> IResult<&str, (Cave, Cave)> {
+fn parse_line(input: &str) -> IResult<&str, (&str, &str)> {
   let (cont, (a, _, b)) = tuple((alpha1, tag("-"), alpha1))(input)?;
-  Ok((cont, (str_to_cave(a), str_to_cave(b))))
+  Ok((cont, (a, b)))
 }
 
 fn max_once(c: &Cave, visited: &Vec<Cave>) -> bool{
@@ -88,9 +97,16 @@ impl Day for Day12 {
 
   fn parse(input: &str) -> IResult<&str, Self::Input> {
     let (cont, list) = separated_list0(newline, parse_line)(input)?;
-
+    let mut keys: HashMap<&str, u32> = HashMap::new();
     let mut hm: HashMap<Cave, HashSet<Cave>> = HashMap::new();
-    for (c1, c2) in list {
+
+    let mut max_value = 1;
+    let start = 1 << 31;
+    let end = 1 << 30;
+
+    for (s1, s2) in list {
+      let c1 = str_to_cave(&mut keys, &mut max_value, s1);
+      let c2 = str_to_cave(&mut keys, &mut max_value, s2);
       let entry1 = hm.entry(c1.clone()).or_insert(HashSet::new());
       entry1.insert(c2.clone());
       let entry2 = hm.entry(c2.clone()).or_insert(HashSet::new());
