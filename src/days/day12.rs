@@ -46,19 +46,6 @@ fn parse_line(input: &str) -> IResult<&str, (&str, &str)> {
   Ok((cont, (a, b)))
 }
 
-fn max_once(c: &Cave, visited: &Vec<Cave>) -> bool {
-  let mut count = 0;
-  for c2 in visited {
-    if c2 == c {
-      count += 1;
-      if count > 1 {
-        return false;
-      }
-    }
-  }
-  true
-}
-
 fn run(
   c: &Cave,
   hm: &HashMap<Cave, HashSet<Cave>>,
@@ -110,8 +97,6 @@ impl Day for Day12 {
     let mut hm: HashMap<Cave, HashSet<Cave>> = HashMap::new();
 
     let mut max_value = 1;
-    let start = 1 << 31;
-    let end = 1 << 30;
 
     for (s1, s2) in list {
       let c1 = str_to_cave(&mut keys, &mut max_value, s1);
