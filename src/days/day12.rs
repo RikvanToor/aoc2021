@@ -11,13 +11,16 @@ pub struct Day12;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Cave {
-  Small(u32),
-  Big(u32),
+  Other(u32),
   Start,
   End,
 }
 
-fn str_to_cave<'a>(keys_map: &mut HashMap<&'a str, u32>, max_value: &mut u32, input: &'a str) -> Cave {
+fn str_to_cave<'a>(
+  keys_map: &mut HashMap<&'a str, u32>,
+  max_value: &mut u32,
+  input: &'a str,
+) -> Cave {
   use Cave::*;
   match input {
     "start" => Start,
@@ -33,11 +36,7 @@ fn str_to_cave<'a>(keys_map: &mut HashMap<&'a str, u32>, max_value: &mut u32, in
           key
         }
       };
-      if is_small {
-        Small(key)
-      } else {
-        Big(key)
-      }
+      Other(key)
     }
   }
 }
@@ -47,7 +46,7 @@ fn parse_line(input: &str) -> IResult<&str, (&str, &str)> {
   Ok((cont, (a, b)))
 }
 
-fn max_once(c: &Cave, visited: &Vec<Cave>) -> bool{
+fn max_once(c: &Cave, visited: &Vec<Cave>) -> bool {
   let mut count = 0;
   for c2 in visited {
     if c2 == c {
@@ -60,31 +59,41 @@ fn max_once(c: &Cave, visited: &Vec<Cave>) -> bool{
   true
 }
 
-fn run(c: &Cave, hm: &HashMap<Cave, HashSet<Cave>>, visited: Vec<Cave>, has_repeated_small: bool) -> Vec<Vec<Cave>> {
+fn run(
+  c: &Cave,
+  hm: &HashMap<Cave, HashSet<Cave>>,
+  visited: u32,
+  has_repeated_small: bool,
+) -> usize {
   use Cave::*;
   let nodes = hm.get(c).unwrap();
-  let mut res = vec![];
+  let mut res = 0;
   for c in nodes {
     match c {
-      Big(_) => {
-        let mut ress = run(c, hm, visited.clone(), has_repeated_small);
-        res.append(&mut ress);
-      }
-      Small(_) => {
-        if !visited.contains(&c) {
-          let mut path = visited.clone();
-          path.push(c.clone());
-          let mut ress = run(c, hm, path, has_repeated_small);
-          res.append(&mut ress);
-        } else if !has_repeated_small && max_once(c, &visited) {
-          let mut path = visited.clone();
-          path.push(c.clone());
-          let mut ress = run(c, hm, path, true);
-          res.append(&mut ress);
+      Other(k) => {
+        if k & 1 == 1 {
+          // Remove small sign, just keep the ID
+          let uk = k ^ 1;
+          //cave is small
+          if visited & uk != uk {
+            //this node has not been visited
+            let path = visited | uk;
+            let ress = run(c, hm, path, has_repeated_small);
+            res += ress;
+          } else if !has_repeated_small {
+            //This node has been visited, but we can repeat it
+            let path = visited | uk;
+            let ress = run(c, hm, path, true);
+            res += ress;
+          }
+        } else {
+          //cave is big
+          let ress = run(c, hm, visited.clone(), has_repeated_small);
+          res += ress;
         }
       }
       End => {
-        res.push(visited.clone());
+        res += 1;
       }
       Start => {}
     }
@@ -119,16 +128,16 @@ impl Day for Day12 {
   type Output1 = usize;
 
   fn part_1(input: &Self::Input) -> Self::Output1 {
-    let paths = run(&Cave::Start, input, vec![Cave::Start], true);
+    let paths = run(&Cave::Start, input, 0, true);
 
-    paths.len()
+    paths
   }
 
   type Output2 = usize;
 
   fn part_2(input: &Self::Input) -> Self::Output2 {
-    let paths = run(&Cave::Start, input, vec![Cave::Start], false);
+    let paths = run(&Cave::Start, input, 0, false);
 
-    paths.len()
+    paths
   }
 }
