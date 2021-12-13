@@ -91,17 +91,17 @@ impl Day for Day13 {
     let max_y = ys.clone().max().unwrap();
     let min_y = ys.min().unwrap();
 
-    let mut res = String::from("\n");
+    let mut res = String::from("");
 
     for y in *min_y..=*max_y {
+      res.push_str("\n");
       for x in *min_x..=*max_x {
         if dots.contains(&(x, y)) {
-          res.push_str("#");
+          res.push_str("█");
         } else {
-          res.push_str(".");
+          res.push_str("░");
         }
       }
-      res.push_str("\n");
     }
     res
   }
