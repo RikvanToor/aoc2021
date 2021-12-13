@@ -20,7 +20,7 @@ fn parse_board(input: &str) -> IResult<&str, [[i32; 5]; 5]> {
   Ok((cont, res.try_into().unwrap()))
 }
 
-fn setup_boards(boards: &Vec<[[i32; 5]; 5]>) -> Vec<[[(i32, bool); 5]; 5]> {
+fn setup_boards(boards: &[[[i32; 5]; 5]]) -> Vec<[[(i32, bool); 5]; 5]> {
   boards
     .iter()
     .map(|b| b.map(|r| r.map(|x| (x, false))))
@@ -28,11 +28,11 @@ fn setup_boards(boards: &Vec<[[i32; 5]; 5]>) -> Vec<[[(i32, bool); 5]; 5]> {
 }
 
 fn update_boards(boards: &mut Vec<[[(i32, bool); 5]; 5]>, n: i32) {
-  for bi in 0..boards.len() {
-    for x in 0..5 {
-      for y in 0..5 {
-        if boards[bi][x][y].0 == n {
-          boards[bi][x][y].1 = true;
+  for board in boards {
+    for row in board {
+      for cell in row {
+        if cell.0 == n {
+          cell.1 = true;
         }
       }
     }

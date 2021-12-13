@@ -8,7 +8,7 @@ use crate::days::Day;
 
 pub struct Day06;
 
-fn run(input: &Vec<u8>, days: u32) -> u64 {
+fn run(input: &[u8], days: u32) -> u64 {
   let mut counts: HashMap<u8, u64> = (0..=8).map(|x| (x, 0)).collect();
   for x in input {
     *counts.entry(*x).or_default() += 1;

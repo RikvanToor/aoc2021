@@ -32,8 +32,8 @@ pub enum FoldAlong {
   Y(u32),
 }
 
-fn run(points: &Vec<(u32, u32)>, folds: &Vec<FoldAlong>) -> Vec<(u32, u32)> {
-  let mut dots: Vec<(u32, u32)> = points.clone();
+fn run(points: &[(u32, u32)], folds: &[FoldAlong]) -> Vec<(u32, u32)> {
+  let mut dots: Vec<(u32, u32)> = points.to_vec();
   for f in folds {
     for (x, y) in &mut dots {
       match f {
@@ -49,7 +49,7 @@ fn run(points: &Vec<(u32, u32)>, folds: &Vec<FoldAlong>) -> Vec<(u32, u32)> {
         }
       }
     }
-    dots.sort();
+    dots.sort_unstable();
     dots.dedup();
     match f {
       FoldAlong::X(i) => {
@@ -75,7 +75,7 @@ impl Day for Day13 {
   type Output1 = usize;
 
   fn part_1((points, folds): &Self::Input) -> Self::Output1 {
-    let dots = run(points, &vec![folds[0]]);
+    let dots = run(points, &[folds[0]]);
 
     dots.len()
   }
@@ -94,12 +94,12 @@ impl Day for Day13 {
     let mut res = String::from("");
 
     for y in *min_y..=*max_y {
-      res.push_str("\n");
+      res.push('\n');
       for x in *min_x..=*max_x {
         if dots.contains(&(x, y)) {
-          res.push_str("█");
+          res.push('█');
         } else {
-          res.push_str("░");
+          res.push('░');
         }
       }
     }

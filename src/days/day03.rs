@@ -17,13 +17,13 @@ fn parse_line(input: &str) -> IResult<&str, Vec<u32>> {
   many0(alt((pmap(char('0'), |_| 0), pmap(char('1'), |_| 1))))(input)
 }
 
-fn transpose<T: Copy>(input: &Vec<Vec<T>>) -> Vec<Vec<T>> {
+fn transpose<T: Copy>(input: &[Vec<T>]) -> Vec<Vec<T>> {
   (0..input[0].len())
     .map(|i| input.iter().map(|r| r[i]).collect())
     .collect()
 }
 
-fn filter_common(input: &Vec<Vec<u32>>, i: usize, mode: FilterMode) -> Vec<Vec<u32>> {
+fn filter_common(input: &[Vec<u32>], i: usize, mode: FilterMode) -> Vec<Vec<u32>> {
   if input.len() <= 1 {
     return input.to_owned();
   }
@@ -41,7 +41,7 @@ fn filter_common(input: &Vec<Vec<u32>>, i: usize, mode: FilterMode) -> Vec<Vec<u
   res
 }
 
-fn parse_bits(input: &Vec<u32>) -> u32 {
+fn parse_bits(input: &[u32]) -> u32 {
   input.iter().fold(0, |acc, x| acc * 2 + x)
 }
 
@@ -68,7 +68,7 @@ impl Day for Day03 {
       })
       .collect();
     let gamma: u32 = parse_bits(&gamma_bits);
-    let epsilon: u32 = parse_bits(&gamma_bits.iter().map(|x| 1 - x).collect());
+    let epsilon: u32 = parse_bits(&gamma_bits.iter().map(|x| 1 - x).collect::<Vec<u32>>());
     gamma * epsilon
   }
 
@@ -81,8 +81,8 @@ impl Day for Day03 {
     let co2_bits = &(0..input[0].len()).fold(input.to_owned(), |acc, i| {
       filter_common(&acc, i, FilterMode::LeastCommon)
     })[0];
-    let oxygen = parse_bits(&oxygen_bits);
-    let co2 = parse_bits(&co2_bits);
+    let oxygen = parse_bits(oxygen_bits);
+    let co2 = parse_bits(co2_bits);
     oxygen * co2
   }
 }

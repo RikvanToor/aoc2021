@@ -16,7 +16,7 @@ fn parse_line(input: &str) -> IResult<&str, Vec<u32>> {
   Ok((cont, res))
 }
 
-fn find_low_points(input: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
+fn find_low_points(input: &[Vec<u32>]) -> Vec<(usize, usize)> {
   let height = input.len();
   let width = input[0].len();
   let mut res = vec![];
@@ -37,7 +37,7 @@ fn find_low_points(input: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
 
 fn expand_basin(
   basin_points: &mut HashSet<(usize, usize)>,
-  input: &Vec<Vec<u32>>,
+  input: &[Vec<u32>],
   point: (usize, usize),
 ) {
   let (x, y) = point;

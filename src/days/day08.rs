@@ -51,11 +51,11 @@ fn all_segments() -> HashSet<Segment> {
 fn update_map(
   char_map: &mut HashMap<char, HashSet<Segment>>,
   nr: &HashSet<Segment>,
-  word: &String,
+  word: &str,
 ) {
   let inv: HashSet<Segment> = all_segments().difference(nr).cloned().collect();
   for c in 'a'..='g' {
-    let cur = char_map.entry(c).or_insert(all_segments());
+    let cur = char_map.entry(c).or_insert_with(all_segments);
     if word.contains(c) {
       *cur = cur.intersection(nr).cloned().collect();
     } else {
@@ -64,13 +64,13 @@ fn update_map(
   }
 }
 
-fn set_chars(chars: &mut HashSet<char>, word: &String) {
+fn set_chars(chars: &mut HashSet<char>, word: &str) {
   for c in word.chars() {
     chars.insert(c);
   }
 }
 
-fn find_match(input_set: &HashSet<Segment>, references: &Vec<HashSet<Segment>>) -> i32 {
+fn find_match(input_set: &HashSet<Segment>, references: &[HashSet<Segment>]) -> i32 {
   for i in 0..=9 {
     if input_set.eq(&references[i]) {
       return i as i32;
@@ -80,7 +80,7 @@ fn find_match(input_set: &HashSet<Segment>, references: &Vec<HashSet<Segment>>) 
   panic!("No solution found")
 }
 
-fn run_line(i: &Vec<String>, o: &Vec<String>) -> i32 {
+fn run_line(i: &[String], o: &[String]) -> i32 {
   use Segment::*;
 
   let mut char_map: HashMap<char, HashSet<Segment>> = HashMap::new();
@@ -105,16 +105,16 @@ fn run_line(i: &Vec<String>, o: &Vec<String>) -> i32 {
   for x in i {
     match x.len() {
       2 => {
-        update_map(&mut char_map, &nrs[1], &x);
-        set_chars(&mut one_chars, &x);
+        update_map(&mut char_map, &nrs[1], x);
+        set_chars(&mut one_chars, x);
       }
       3 => {
-        update_map(&mut char_map, &nrs[7], &x);
-        set_chars(&mut seven_chars, &x);
+        update_map(&mut char_map, &nrs[7], x);
+        set_chars(&mut seven_chars, x);
       }
       4 => {
-        update_map(&mut char_map, &nrs[4], &x);
-        set_chars(&mut four_chars, &x);
+        update_map(&mut char_map, &nrs[4], x);
+        set_chars(&mut four_chars, x);
       }
       _ => (),
     }
@@ -127,20 +127,20 @@ fn run_line(i: &Vec<String>, o: &Vec<String>) -> i32 {
     match x.len() {
       5 => {
         if char_set.intersection(&one_chars).count() == 2 {
-          update_map(&mut char_map, &nrs[3], &x);
+          update_map(&mut char_map, &nrs[3], x);
         } else if char_set.intersection(&four_chars).count() == 3 {
-          update_map(&mut char_map, &nrs[5], &x);
+          update_map(&mut char_map, &nrs[5], x);
         } else {
-          update_map(&mut char_map, &nrs[2], &x);
+          update_map(&mut char_map, &nrs[2], x);
         }
       }
       6 => {
         if char_set.intersection(&four_chars).count() == 4 {
-          update_map(&mut char_map, &nrs[9], &x);
+          update_map(&mut char_map, &nrs[9], x);
         } else if char_set.intersection(&seven_chars).count() == 3 {
-          update_map(&mut char_map, &nrs[0], &x);
+          update_map(&mut char_map, &nrs[0], x);
         } else {
-          update_map(&mut char_map, &nrs[6], &x);
+          update_map(&mut char_map, &nrs[6], x);
         }
       }
       _ => (),

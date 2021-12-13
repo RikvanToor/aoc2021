@@ -105,9 +105,9 @@ impl Day for Day12 {
     for (s1, s2) in list {
       let c1 = str_to_cave(&mut keys, &mut max_value, s1);
       let c2 = str_to_cave(&mut keys, &mut max_value, s2);
-      let entry1 = hm.entry(c1).or_insert(vec![]);
+      let entry1 = hm.entry(c1).or_default();
       entry1.push(c2);
-      let entry2 = hm.entry(c2).or_insert(vec![]);
+      let entry2 = hm.entry(c2).or_default();
       entry2.push(c1);
     }
 
@@ -118,17 +118,13 @@ impl Day for Day12 {
 
   fn part_1(input: &Self::Input) -> Self::Output1 {
     let mut res_map = HashMap::new();
-    let paths = run(&START, input, &mut res_map, 0, 1);
-
-    paths
+    run(&START, input, &mut res_map, 0, 1)
   }
 
   type Output2 = usize;
 
   fn part_2(input: &Self::Input) -> Self::Output2 {
     let mut res_map = HashMap::new();
-    let paths = run(&START, input, &mut res_map, 0, 0);
-
-    paths
+    run(&START, input, &mut res_map, 0, 0)
   }
 }

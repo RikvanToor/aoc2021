@@ -50,9 +50,10 @@ fn flash(input: &mut [[Octopus; WIDTH]; HEIGHT], x: usize, y: usize) {
 }
 
 fn step(input: &mut [[Octopus; WIDTH]; HEIGHT]) -> u32 {
-  for y in 0..HEIGHT {
-    for x in 0..WIDTH {
-      input[y][x].level += 1;
+
+  for row in &mut *input {
+    for l in row {
+      l.level += 1;
     }
   }
 
@@ -65,12 +66,12 @@ fn step(input: &mut [[Octopus; WIDTH]; HEIGHT]) -> u32 {
   }
 
   let mut flash_count = 0;
-  for y in 0..HEIGHT {
-    for x in 0..WIDTH {
-      if input[y][x].has_flashed {
-        input[y][x].level = 0;
+  for row in input {
+    for l in row {
+      if l.has_flashed {
+        l.level = 0;
         flash_count += 1;
-        input[y][x].has_flashed = false;
+        l.has_flashed = false;
       }
     }
   }

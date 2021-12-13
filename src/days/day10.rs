@@ -59,7 +59,7 @@ impl Day for Day10 {
   fn part_1(input: &Self::Input) -> Self::Output1 {
     input
       .iter()
-      .map(|l| match check_line(&l) {
+      .map(|l| match check_line(l) {
         Ok(_) => 0,
         Err(Parenthesis) => 3,
         Err(Brace) => 57,
@@ -74,11 +74,8 @@ impl Day for Day10 {
   fn part_2(input: &Self::Input) -> Self::Output2 {
     let mut scores: Vec<i64> = input
       .iter()
-      .map(|l| check_line(&l))
-      .filter(|x| match x {
-        Err(_) => false,
-        Ok(_) => true,
-      })
+      .map(|l| check_line(l))
+      .filter(|x| x.is_ok())
       .map(|x| match x {
         Err(_) => 0,
         Ok(remaining) => remaining.iter().rfold(0, |acc, x| {
@@ -93,7 +90,7 @@ impl Day for Day10 {
       })
       .collect();
 
-    scores.sort();
+    scores.sort_unstable();
 
     scores[scores.len() / 2]
   }
