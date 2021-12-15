@@ -86,7 +86,7 @@ impl Day for Day15 {
           .collect();
         res
       },
-      |(x, y)| (width * 5 - x - 1 + height * 5 - y - 1 + (width - x)/width + (height - y)/height) as u32,
+      |(x, y)| (width * 5 - x - 1 + height * 5 - y - 1) as u32,
       |(x, y)| *x == width * 5 - 1 && *y == height * 5 - 1,
     );
 
