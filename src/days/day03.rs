@@ -1,7 +1,7 @@
+use crate::parser::grid;
 use nom::branch::alt;
-use nom::character::complete::{char, newline};
+use nom::character::complete::char;
 use nom::combinator::map as pmap;
-use nom::multi::{many0, separated_list1};
 use nom::IResult;
 
 use crate::days::Day;
@@ -11,10 +11,6 @@ pub struct Day03;
 enum FilterMode {
   MostCommon,
   LeastCommon,
-}
-
-fn parse_line(input: &str) -> IResult<&str, Vec<u32>> {
-  many0(alt((pmap(char('0'), |_| 0), pmap(char('1'), |_| 1))))(input)
 }
 
 fn transpose<T: Copy>(input: &[Vec<T>]) -> Vec<Vec<T>> {
@@ -49,7 +45,7 @@ impl Day for Day03 {
   type Input = Vec<Vec<u32>>;
 
   fn parse(input: &str) -> IResult<&str, Self::Input> {
-    separated_list1(newline, parse_line)(input)
+    grid(alt((pmap(char('0'), |_| 0), pmap(char('1'), |_| 1))))(input)
   }
 
   type Output1 = u32;

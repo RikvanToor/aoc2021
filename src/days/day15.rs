@@ -1,5 +1,4 @@
-use nom::character::complete::{digit1, newline};
-use nom::multi::separated_list1;
+use crate::parser::digit_grid;
 use nom::IResult;
 use pathfinding::directed::astar::astar;
 
@@ -7,20 +6,11 @@ use crate::days::Day;
 
 pub struct Day15;
 
-fn parse_line(input: &str) -> IResult<&str, Vec<u32>> {
-  let (cont, digits_str) = digit1(input)?;
-  let res = digits_str
-    .chars()
-    .map(|c| c.to_digit(10).unwrap())
-    .collect();
-  Ok((cont, res))
-}
-
 impl Day for Day15 {
   type Input = Vec<Vec<u32>>;
 
   fn parse(input: &str) -> IResult<&str, Self::Input> {
-    separated_list1(newline, parse_line)(input)
+    digit_grid(input)
   }
 
   type Output1 = u32;

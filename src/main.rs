@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 mod parser;
 use chrono::prelude::*;
 use clap::{App, AppSettings, Arg, SubCommand};
