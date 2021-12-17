@@ -37,7 +37,8 @@ use Packet::*;
 
 fn parse_transmission(input: (&[u8], usize)) -> IResult<(&[u8], usize), Packet> {
   let (cont, packet) = parse_packet(input)?;
-  //TODO zeroes
+  // Consume optional zeroes at the end of input
+  let (cont, _) = many0(bits::tag(0, 1usize))(cont)?;
   Ok((cont, packet))
 }
 
@@ -248,7 +249,6 @@ impl Day for Day16 {
 
   fn parse(input: &str) -> IResult<&str, Self::Input> {
     let input_vec = hex_to_bytes(input).unwrap();
-    // TODO error handling
     let (_, package) = parse_transmission((&input_vec, 0)).unwrap();
     Ok(("", package))
   }
