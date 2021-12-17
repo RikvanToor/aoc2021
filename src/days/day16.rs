@@ -1,40 +1,12 @@
+use nom::bits::complete as bits;
 use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::bytes::complete::take;
 use nom::combinator::eof;
 use nom::combinator::map as pmap;
 use nom::multi::many0;
 use nom::multi::many_m_n;
-use nom::sequence::tuple;
 use nom::IResult;
 
 use crate::days::Day;
-
-fn parse_binary(input: &str) -> IResult<&str, Vec<u8>> {
-  let mut binary_vec: Vec<u8> = vec![];
-  for c in input.chars() {
-    match c {
-      '0' => binary_vec.extend_from_slice(&[0, 0, 0, 0]),
-      '1' => binary_vec.extend_from_slice(&[0, 0, 0, 1]),
-      '2' => binary_vec.extend_from_slice(&[0, 0, 1, 0]),
-      '3' => binary_vec.extend_from_slice(&[0, 0, 1, 1]),
-      '4' => binary_vec.extend_from_slice(&[0, 1, 0, 0]),
-      '5' => binary_vec.extend_from_slice(&[0, 1, 0, 1]),
-      '6' => binary_vec.extend_from_slice(&[0, 1, 1, 0]),
-      '7' => binary_vec.extend_from_slice(&[0, 1, 1, 1]),
-      '8' => binary_vec.extend_from_slice(&[1, 0, 0, 0]),
-      '9' => binary_vec.extend_from_slice(&[1, 0, 0, 1]),
-      'A' => binary_vec.extend_from_slice(&[1, 0, 1, 0]),
-      'B' => binary_vec.extend_from_slice(&[1, 0, 1, 1]),
-      'C' => binary_vec.extend_from_slice(&[1, 1, 0, 0]),
-      'D' => binary_vec.extend_from_slice(&[1, 1, 0, 1]),
-      'E' => binary_vec.extend_from_slice(&[1, 1, 1, 0]),
-      'F' => binary_vec.extend_from_slice(&[1, 1, 1, 1]),
-      _ => panic!("Not a hex string"), //TODO properly handle
-    }
-  }
-  Ok(("", binary_vec))
-}
 
 #[derive(Debug, Copy, Clone)]
 pub enum Operator {
@@ -51,7 +23,7 @@ pub enum Operator {
 pub enum Packet {
   Literal {
     version: u8,
-    value: Vec<u8>,
+    value: u64,
   },
   OperatorPacket {
     version: u8,
@@ -63,59 +35,51 @@ pub enum Packet {
 use Operator::*;
 use Packet::*;
 
-fn vec_to_nr(vec: &[u8]) -> u64 {
-  vec.iter().fold(0, |acc, x| acc * 2 + *x as u64)
-}
-
-fn parse_transmission(input: &[u8]) -> IResult<&[u8], Packet> {
+fn parse_transmission(input: (&[u8], usize)) -> IResult<(&[u8], usize), Packet> {
   let (cont, packet) = parse_packet(input)?;
-  let (cont, _zeroes) = many0(tag(&[0]))(cont)?;
+  //TODO zeroes
   Ok((cont, packet))
 }
 
-fn parse_packet(input: &[u8]) -> IResult<&[u8], Packet> {
-  let (cont, version_vec) = take(3usize)(input)?;
-  let version = vec_to_nr(version_vec) as u8;
+fn parse_packet(input: (&[u8], usize)) -> IResult<(&[u8], usize), Packet> {
+  // Take version
+  let (cont, version) = bits::take(3usize)(input)?;
+  // Parse either a literal value or an operator packet
   alt((parse_literal(version), parse_operator_packet(version)))(cont)
 }
 
-fn parse_literal(version: u8) -> impl FnMut(&[u8]) -> IResult<&[u8], Packet> {
+fn parse_literal(version: u8) -> impl FnMut((&[u8], usize)) -> IResult<(&[u8], usize), Packet> {
   move |input| {
-    let (cont, _) = tag(&[1, 0, 0])(input)?;
-    let (cont, mut first_blocks) = many0(parse_literal_block)(cont)?;
-    let (cont, _) = tag(&[0])(cont)?;
-    let (cont, last_block) = take(4usize)(cont)?;
+    // A literal has type Id 4
+    let (cont, _) = bits::tag(4, 3usize)(input)?;
+    // Parse many 5-bit blocks starting with a 1
+    let (cont, mut blocks) = many0(parse_literal_block)(cont)?;
+    // Parse the final 5-bit block starting with a 0
+    let (cont, _) = bits::tag(0, 1usize)(cont)?;
+    let (cont, last_block) = bits::take(4usize)(cont)?;
 
-    first_blocks.push(last_block.to_vec());
-    let total_block = first_blocks.concat();
+    blocks.push(last_block);
+    // Fold the blocks to a u64 value
     let res = Literal {
       version: version,
-      value: total_block,
+      value: blocks.iter().fold(0, |acc, x| (acc << 4) + *x as u64),
     };
+
     Ok((cont, res))
   }
 }
 
-fn parse_literal_block(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-  let (cont, _) = tag(&[1])(input)?;
-  let (cont, val) = take(4usize)(cont)?;
-  Ok((cont, val.to_vec()))
+fn parse_literal_block(input: (&[u8], usize)) -> IResult<(&[u8], usize), u8> {
+  // Only continue when the first bit is a 1, return the 4 bits after
+  let (cont, _) = bits::tag(1, 1usize)(input)?;
+  bits::take(4usize)(cont)
 }
 
-fn parse_operator(input: &[u8]) -> IResult<&[u8], Operator> {
-  alt((
-    pmap(tag(&[0, 0, 0]), |_| Sum),
-    pmap(tag(&[0, 0, 1]), |_| Product),
-    pmap(tag(&[0, 1, 0]), |_| Min),
-    pmap(tag(&[0, 1, 1]), |_| Max),
-    pmap(tag(&[1, 0, 1]), |_| GreaterThan),
-    pmap(tag(&[1, 1, 0]), |_| LessThan),
-    pmap(tag(&[1, 1, 1]), |_| EqualTo),
-  ))(input)
-}
-
-fn parse_operator_packet(version: u8) -> impl FnMut(&[u8]) -> IResult<&[u8], Packet> {
+fn parse_operator_packet(
+  version: u8,
+) -> impl FnMut((&[u8], usize)) -> IResult<(&[u8], usize), Packet> {
   move |input| {
+    // Get the operator and continue
     let (cont, operator) = parse_operator(input)?;
     alt((
       parse_length_operator(version, operator),
@@ -124,17 +88,30 @@ fn parse_operator_packet(version: u8) -> impl FnMut(&[u8]) -> IResult<&[u8], Pac
   }
 }
 
+fn parse_operator(input: (&[u8], usize)) -> IResult<(&[u8], usize), Operator> {
+  alt((
+    pmap(bits::tag(0, 3usize), |_| Sum),
+    pmap(bits::tag(1, 3usize), |_| Product),
+    pmap(bits::tag(2, 3usize), |_| Min),
+    pmap(bits::tag(3, 3usize), |_| Max),
+    pmap(bits::tag(5, 3usize), |_| GreaterThan),
+    pmap(bits::tag(6, 3usize), |_| LessThan),
+    pmap(bits::tag(7, 3usize), |_| EqualTo),
+  ))(input)
+}
+
 fn parse_length_operator(
   version: u8,
   operator: Operator,
-) -> impl FnMut(&[u8]) -> IResult<&[u8], Packet> {
+) -> impl FnMut((&[u8], usize)) -> IResult<(&[u8], usize), Packet> {
   move |input| {
-    let (cont, _) = tag(&[0])(input)?;
-    let (cont, bits) = take(15usize)(cont)?;
-    let length = vec_to_nr(bits);
-    let (cont, next_bits) = take(length as usize)(cont)?;
-    // TODO error handling for parsing sub-packets
-    let (_, (sub_packets, _)) = tuple((many0(parse_packet), eof))(next_bits)?;
+    // Length operators have a 0 after the operator type
+    let (cont, _) = bits::tag(0, 1usize)(input)?;
+    // The length is specified in the next 15 bits
+    let (cont, length) = bits::take(15usize)(cont)?;
+    // Parse sub-packages in the next X bits according to the length we just parsed
+    // Only succeeds if the entire length is used
+    let (cont, sub_packets) = parse_with_length(length, many0(parse_packet))(cont)?;
     Ok((
       cont,
       OperatorPacket {
@@ -149,12 +126,13 @@ fn parse_length_operator(
 fn parse_count_operator(
   version: u8,
   operator: Operator,
-) -> impl FnMut(&[u8]) -> IResult<&[u8], Packet> {
+) -> impl FnMut((&[u8], usize)) -> IResult<(&[u8], usize), Packet> {
   move |input| {
-    let (cont, _) = tag(&[1])(input)?;
-    let (cont, bits) = take(11usize)(cont)?;
-    let count = vec_to_nr(bits) as usize;
-
+    // Count operators have a 1 after the operator type
+    let (cont, _) = bits::tag(1, 1usize)(input)?;
+    // The next 11 bits represent the number of sub_packages
+    let (cont, count) = bits::take(11usize)(cont)?;
+    // Parse exactly that many sub-packages
     let (cont, sub_packets) = many_m_n(count, count, parse_packet)(cont)?;
     Ok((
       cont,
@@ -180,7 +158,7 @@ fn sum_versions(packet: &Packet) -> usize {
 
 fn eval(packet: &Packet) -> u64 {
   match packet {
-    Literal { value, .. } => vec_to_nr(value) as u64,
+    Literal { value, .. } => *value as u64,
     OperatorPacket {
       sub_packets,
       operator,
@@ -219,26 +197,71 @@ fn eval(packet: &Packet) -> u64 {
   }
 }
 
+// Apply a parser to the first X bits of the input,
+fn parse_with_length<'a, T, F>(
+  count: usize,
+  mut f: F,
+) -> impl FnMut((&'a [u8], usize)) -> IResult<(&'a [u8], usize), T>
+where
+  F: FnMut((&'a [u8], usize)) -> IResult<(&'a [u8], usize), T>,
+{
+  move |(input, offset)| {
+    // Calculate how many bytes the left and right side of the split will contain
+    let total_size_left = offset + count;
+    let left_segments = (total_size_left - 1) / 8 + 1;
+
+    let input_segments = input.len();
+    let total_size_right = input_segments * 8 - total_size_left;
+    let right_segments = (total_size_right - 1) / 8 + 1;
+    let right_offset = total_size_left % 8;
+
+    // Split the input into two sides
+    let left: &[u8] = &input[0..left_segments];
+    let right: &[u8] = &input[input_segments - right_segments..input_segments];
+
+    // Apply the parser to the left side
+    let (cont_l, inner) = f((left, offset))?;
+    // Ensure the complete left side has been consumed by the supplied parser
+    let (cont_l, _): (_, u8) = if right_offset > 0 {
+      bits::take(8 - right_offset)(cont_l)
+    } else {
+      Ok((cont_l, 0))
+    }?;
+    let (_, _) = eof(cont_l)?;
+
+    // Return the result found in the left side, and continue with the right side
+    Ok(((right, right_offset), inner))
+  }
+}
+
+fn hex_to_bytes(input: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
+  (0..input.len())
+    .step_by(2)
+    .map(|i| u8::from_str_radix(&input[i..=i + 1], 16))
+    .collect()
+}
+
 pub struct Day16;
 
 impl Day for Day16 {
-  type Input = Vec<u8>;
+  type Input = Packet;
 
   fn parse(input: &str) -> IResult<&str, Self::Input> {
-    parse_binary(input)
+    let input_vec = hex_to_bytes(input).unwrap();
+    // TODO error handling
+    let (_, package) = parse_transmission((&input_vec, 0)).unwrap();
+    Ok(("", package))
   }
 
   type Output1 = usize;
 
   fn part_1(input: &Self::Input) -> Self::Output1 {
-    let (_, packet) = parse_transmission(input).unwrap();
-    sum_versions(&packet)
+    sum_versions(&input)
   }
 
   type Output2 = u64;
 
   fn part_2(input: &Self::Input) -> Self::Output2 {
-    let (_, packet) = parse_transmission(input).unwrap();
-    eval(&packet)
+    eval(&input)
   }
 }
