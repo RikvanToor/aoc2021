@@ -34,132 +34,94 @@ fn parse_snailfish_number(input: &str) -> IResult<&str, SnailfishNumber> {
   alt((parse_num, parse_pair))(input)
 }
 
-fn add_first_left(input: &SnailfishNumber, n: i32) -> SnailfishNumber {
+fn add_first_left(input: &mut SnailfishNumber, n: i32) {
   use SnailfishNumber::*;
   match input {
-    Num(x) => Num(x + n),
-    Pair(bn1, bn2) => {
-      let new_n1 = add_first_left(bn1, n);
-      Pair(Box::new(new_n1), bn2.clone())
+    Num(x) => *input = Num(*x + n),
+    Pair(bn1, _) => {
+      add_first_left(&mut *bn1, n);
     }
   }
 }
 
-fn add_first_right(input: &SnailfishNumber, n: i32) -> SnailfishNumber {
+fn add_first_right(input: &mut SnailfishNumber, n: i32) {
   use SnailfishNumber::*;
   match input {
-    Num(x) => Num(x + n),
-    Pair(bn1, bn2) => {
-      let new_n2 = add_first_right(bn2, n);
-      Pair(bn1.clone(), Box::new(new_n2))
+    Num(x) => *input = Num(*x + n),
+    Pair(_, bn2) => {
+      add_first_right(bn2, n);
     }
   }
 }
 
-fn explode_1(
-  input: &SnailfishNumber,
-  depth: usize,
-) -> Result<(SnailfishNumber, (Option<i32>, Option<i32>)), SnailfishNumber> {
+fn explode_1(input: &mut SnailfishNumber, depth: usize) -> Option<(Option<i32>, Option<i32>)> {
   use SnailfishNumber::*;
   match input {
     Pair(bn1, bn2) => {
       if let (Num(x), Num(y)) = (bn1.as_ref(), bn2.as_ref()) {
         if depth >= 4 {
-          Ok((Num(0), (Some(*x), Some(*y))))
+          let res = Some((Some(*x), Some(*y)));
+          *input = Num(0);
+          res
         } else {
-          Err(input.clone())
+          None
         }
       } else {
-        if let Ok((new_n1, (opt_add_left, opt_add_right))) = explode_1(bn1.as_ref(), depth + 1) {
+        if let Some((opt_add_left, opt_add_right)) = explode_1(&mut *bn1, depth + 1) {
           // The left element in the pair has had an explosion inside
           if let Some(add_right) = opt_add_right {
-            let new_n2 = add_first_left(bn2.as_ref(), add_right);
-            Ok((
-              Pair(Box::new(new_n1), Box::new(new_n2)),
-              (opt_add_left, None),
-            ))
-          } else {
-            Ok((Pair(Box::new(new_n1), bn2.clone()), (opt_add_left, None)))
+            add_first_left(&mut *bn2, add_right);
           }
-        } else if let Ok((new_n2, (opt_add_left, opt_add_right))) =
-          explode_1(&*bn2.clone(), depth + 1)
-        {
+          Some((opt_add_left, None))
+        } else if let Some((opt_add_left, opt_add_right)) = explode_1(&mut *bn2, depth + 1) {
           // The right element in the pair has had an explosion inside
           if let Some(add_left) = opt_add_left {
-            let new_n1 = add_first_right(bn1, add_left);
-            Ok((
-              Pair(Box::new(new_n1), Box::new(new_n2)),
-              (None, opt_add_right),
-            ))
-          } else {
-            Ok((Pair(bn1.clone(), Box::new(new_n2)), (None, opt_add_right)))
+            add_first_right(&mut *bn1, add_left);
           }
+          Some((None, opt_add_right))
         } else {
           // No explosions inside this pair
-          Err(input.clone())
+          None
         }
       }
     }
-    Num(x) => Err(Num(*x)),
+    Num(_) => None,
   }
 }
 
-fn split(input: &SnailfishNumber) -> Result<SnailfishNumber, SnailfishNumber> {
+fn split(input: &mut SnailfishNumber) -> bool {
   use SnailfishNumber::*;
   match input {
     Num(x) => {
       if *x >= 10 {
         let left = *x / 2;
         let right = (*x + 1) / 2;
-        let pair = Pair(Box::new(Num(left)), Box::new(Num(right)));
-        Ok(pair)
+        *input = Pair(Box::new(Num(left)), Box::new(Num(right)));
+        true
       } else {
-        Err(Num(*x))
+        false
       }
     }
-    Pair(bn1, bn2) => {
-      if let Ok(new_n1) = split(&*bn1) {
-        Ok(Pair(Box::new(new_n1), bn2.clone()))
-      } else if let Ok(new_n2) = split(&*bn2) {
-        Ok(Pair(bn1.clone(), Box::new(new_n2)))
-      } else {
-        Err(input.clone())
-      }
-    }
+    Pair(bn1, bn2) => split(bn1) || split(bn2),
   }
 }
 
-fn step(input: &SnailfishNumber) -> Result<SnailfishNumber, SnailfishNumber> {
-  if let Ok((res, _)) = explode_1(input, 0) {
-    Err(res)
-  } else if let Ok(res) = split(input) {
-    Err(res)
-  } else {
-    Ok(input.clone())
-  }
+fn step(input: &mut SnailfishNumber) -> bool {
+  explode_1(input, 0).is_some() || split(input)
 }
 
-fn reduce(input: &SnailfishNumber) -> SnailfishNumber {
-  match step(input) {
-    Ok(res) => res,
-    Err(res) => reduce(&res),
+fn reduce(input: &mut SnailfishNumber) {
+  let after_step = step(input);
+  if after_step {
+    reduce(input);
   }
 }
 
 fn add(x1: &SnailfishNumber, x2: &SnailfishNumber) -> SnailfishNumber {
   use SnailfishNumber::*;
-  let new_pair = Pair(Box::new(x1.clone()), Box::new(x2.clone()));
-  reduce(&new_pair)
-}
-
-fn print_num(input: &SnailfishNumber) -> String {
-  use SnailfishNumber::*;
-  match input {
-    Num(x) => x.to_string(),
-    Pair(l, r) => {
-      format!("[{},{}]", print_num(&*l.clone()), print_num(&*r.clone()))
-    }
-  }
+  let mut new_pair = Pair(Box::new(x1.clone()), Box::new(x2.clone()));
+  reduce(&mut new_pair);
+  new_pair
 }
 
 fn calculate_magnitude(input: &SnailfishNumber) -> i32 {
