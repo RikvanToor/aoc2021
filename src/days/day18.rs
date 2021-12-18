@@ -34,24 +34,24 @@ fn parse_snailfish_number(input: &str) -> IResult<&str, SnailfishNumber> {
   alt((parse_num, parse_pair))(input)
 }
 
-fn add_first_left(input: SnailfishNumber, n: i32) -> SnailfishNumber {
+fn add_first_left(input: &SnailfishNumber, n: i32) -> SnailfishNumber {
   use SnailfishNumber::*;
   match input {
     Num(x) => Num(x + n),
     Pair(bn1, bn2) => {
-      let new_n1 = add_first_left(*bn1, n);
-      Pair(Box::new(new_n1), bn2)
+      let new_n1 = add_first_left(bn1, n);
+      Pair(Box::new(new_n1), bn2.clone())
     }
   }
 }
 
-fn add_first_right(input: SnailfishNumber, n: i32) -> SnailfishNumber {
+fn add_first_right(input: &SnailfishNumber, n: i32) -> SnailfishNumber {
   use SnailfishNumber::*;
   match input {
     Num(x) => Num(x + n),
     Pair(bn1, bn2) => {
-      let new_n2 = add_first_right(*bn2, n);
-      Pair(bn1, Box::new(new_n2))
+      let new_n2 = add_first_right(bn2, n);
+      Pair(bn1.clone(), Box::new(new_n2))
     }
   }
 }
@@ -63,17 +63,17 @@ fn explode_1(
   use SnailfishNumber::*;
   match input {
     Pair(bn1, bn2) => {
-      if let (Num(x), Num(y)) = (*bn1.clone(), *bn2.clone()) {
+      if let (Num(x), Num(y)) = (bn1.as_ref(), bn2.as_ref()) {
         if depth >= 4 {
-          Ok((Num(0), (Some(x), Some(y))))
+          Ok((Num(0), (Some(*x), Some(*y))))
         } else {
           Err(input.clone())
         }
       } else {
-        if let Ok((new_n1, (opt_add_left, opt_add_right))) = explode_1(&*bn1.clone(), depth + 1) {
+        if let Ok((new_n1, (opt_add_left, opt_add_right))) = explode_1(bn1.as_ref(), depth + 1) {
           // The left element in the pair has had an explosion inside
           if let Some(add_right) = opt_add_right {
-            let new_n2 = add_first_left(*bn2.clone(), add_right);
+            let new_n2 = add_first_left(bn2.as_ref(), add_right);
             Ok((
               Pair(Box::new(new_n1), Box::new(new_n2)),
               (opt_add_left, None),
@@ -86,7 +86,7 @@ fn explode_1(
         {
           // The right element in the pair has had an explosion inside
           if let Some(add_left) = opt_add_left {
-            let new_n1 = add_first_right(*bn1.clone(), add_left);
+            let new_n1 = add_first_right(bn1, add_left);
             Ok((
               Pair(Box::new(new_n1), Box::new(new_n2)),
               (None, opt_add_right),
