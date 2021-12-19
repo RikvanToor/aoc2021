@@ -66,23 +66,21 @@ fn explode_1(input: &mut SnailfishNumber, depth: usize) -> Option<(Option<i32>, 
         } else {
           None
         }
-      } else {
-        if let Some((opt_add_left, opt_add_right)) = explode_1(&mut *bn1, depth + 1) {
-          // The left element in the pair has had an explosion inside
-          if let Some(add_right) = opt_add_right {
-            add_first_left(&mut *bn2, add_right);
-          }
-          Some((opt_add_left, None))
-        } else if let Some((opt_add_left, opt_add_right)) = explode_1(&mut *bn2, depth + 1) {
-          // The right element in the pair has had an explosion inside
-          if let Some(add_left) = opt_add_left {
-            add_first_right(&mut *bn1, add_left);
-          }
-          Some((None, opt_add_right))
-        } else {
-          // No explosions inside this pair
-          None
+      } else if let Some((opt_add_left, opt_add_right)) = explode_1(&mut *bn1, depth + 1) {
+        // The left element in the pair has had an explosion inside
+        if let Some(add_right) = opt_add_right {
+          add_first_left(&mut *bn2, add_right);
         }
+        Some((opt_add_left, None))
+      } else if let Some((opt_add_left, opt_add_right)) = explode_1(&mut *bn2, depth + 1) {
+        // The right element in the pair has had an explosion inside
+        if let Some(add_left) = opt_add_left {
+          add_first_right(&mut *bn1, add_left);
+        }
+        Some((None, opt_add_right))
+      } else {
+        // No explosions inside this pair
+        None
       }
     }
     Num(_) => None,
