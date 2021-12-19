@@ -96,8 +96,8 @@ fn rotate((rx, ry, rz): &Rotation, pos: &Pos) -> Pos {
 fn find_overlap(scanner0: &Scanner, scanner1: &Scanner) -> Option<(Pos, Scanner)> {
   let all_rotations = get_all_rotations();
   for p0 in scanner0 {
-    for rotation in &all_rotations {
-      for p1 in scanner1 {
+    for p1 in scanner1 {
+      for rotation in &all_rotations {
         let p_base = rotate(rotation, p1);
         let p_diff = min3(&p_base, p0);
         let transformed_slice = scanner1.iter().map(|p| {
