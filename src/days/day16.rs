@@ -62,7 +62,7 @@ fn parse_literal(version: u8) -> impl FnMut((&[u8], usize)) -> IResult<(&[u8], u
     blocks.push(last_block);
     // Fold the blocks to a u64 value
     let res = Literal {
-      version: version,
+      version,
       value: blocks.iter().fold(0, |acc, x| (acc << 4) + *x as u64),
     };
 
@@ -256,12 +256,12 @@ impl Day for Day16 {
   type Output1 = usize;
 
   fn part_1(input: &Self::Input) -> Self::Output1 {
-    sum_versions(&input)
+    sum_versions(input)
   }
 
   type Output2 = u64;
 
   fn part_2(input: &Self::Input) -> Self::Output2 {
-    eval(&input)
+    eval(input)
   }
 }
