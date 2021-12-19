@@ -100,19 +100,18 @@ fn find_overlap(scanner0: &Scanner, scanner1: &Scanner) -> Option<(Pos, Scanner)
       for p1 in scanner1 {
         let p_base = rotate(rotation, p1);
         let p_diff = min3(&p_base, p0);
-        let mut match_count = 0;
-        let mut transformed_set = HashSet::new();
-
-        for p in scanner1 {
+        let transformed_slice = scanner1.iter().map(|p| {
           let p_rotated = rotate(rotation, p);
           let p_transformed = min3(&p_rotated, &p_diff);
-          transformed_set.insert(p_transformed);
-          if scanner0.contains(&p_transformed) {
-            match_count += 1;
-          }
-        }
-        if match_count >= 12 {
-          return Some((min3(&(0, 0, 0), &p_diff), transformed_set));
+          p_transformed
+        });
+        if transformed_slice
+          .clone()
+          .filter(|p| scanner0.contains(p))
+          .count()
+          >= 12
+        {
+          return Some((min3(&(0, 0, 0), &p_diff), transformed_slice.collect()));
         }
       }
     }
