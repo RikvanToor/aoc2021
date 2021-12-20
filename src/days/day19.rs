@@ -102,8 +102,7 @@ fn find_overlap(scanner0: &Scanner, scanner1: &Scanner) -> Option<(Pos, Scanner)
         let p_diff = min3(&p_base, p0);
         let transformed_slice = scanner1.iter().map(|p| {
           let p_rotated = rotate(rotation, p);
-          let p_transformed = min3(&p_rotated, &p_diff);
-          p_transformed
+          min3(&p_rotated, &p_diff)
         });
         if transformed_slice
           .clone()
