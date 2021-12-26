@@ -17,24 +17,15 @@ pub enum Tile {
 
 impl Tile {
   fn is_empty(&self) -> bool {
-    match self {
-      Empty => true,
-      _ => false,
-    }
+    matches!(self, Empty)
   }
 
   fn is_east(&self) -> bool {
-    match self {
-      East => true,
-      _ => false,
-    }
+    matches!(self, East)
   }
 
   fn is_south(&self) -> bool {
-    match self {
-      South => true,
-      _ => false,
-    }
+    matches!(self, South)
   }
 }
 use Tile::*;
@@ -47,43 +38,37 @@ fn parse_tile(input: &str) -> IResult<&str, Tile> {
   ))(input)
 }
 
-fn run(input: &Vec<Vec<Tile>>, i: usize) -> usize {
+fn run(input: Vec<Vec<Tile>>, i: usize) -> usize {
   let mut moved = false;
   let mut output = input.clone();
   let height = input.len();
   let width = input[0].len();
   for y in 0..height {
     for x in 0..width {
-      match input[y][x] {
-        East => {
-          if input[y][(x + 1) % width].is_empty() {
-            output[y][(x + 1) % width] = East;
-            output[y][x] = Empty;
-            moved = true;
-          }
+      if input[y][x].is_east() {
+        if input[y][(x + 1) % width].is_empty() {
+          output[y][(x + 1) % width] = East;
+          output[y][x] = Empty;
+          moved = true;
         }
-        _ => {}
       }
     }
   }
   for y in 0..height {
     for x in 0..width {
-      match input[y][x] {
-        South => {
-          let y_target = (y + 1) % height;
-          if output[y_target][x].is_empty() && !input[y_target][x].is_south() {
-            output[y_target][x] = South;
-            output[y][x] = Empty;
-            moved = true;
-          }
+      if input[y][x].is_south() {
+        let y_target = (y + 1) % height;
+        if output[y_target][x].is_empty() && !input[y_target][x].is_south() {
+          output[y_target][x] = South;
+          output[y][x] = Empty;
+          moved = true;
         }
-        _ => {}
       }
     }
   }
 
   if moved {
-    run(&output, i + 1)
+    run(output, i + 1)
   } else {
     i
   }
@@ -99,12 +84,12 @@ impl Day for Day25 {
   type Output1 = usize;
 
   fn part_1(input: &Self::Input) -> Self::Output1 {
-    run(input, 1)
+    run(input.clone(), 1)
   }
 
   type Output2 = String;
 
   fn part_2(_input: &Self::Input) -> Self::Output2 {
-    unimplemented!("part_2")
+    String::from("Merry christmas")
   }
 }
