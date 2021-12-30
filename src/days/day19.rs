@@ -6,6 +6,7 @@ use nom::multi::separated_list0;
 use nom::sequence::pair;
 use nom::sequence::tuple;
 use nom::IResult;
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use crate::days::Day;
@@ -13,7 +14,12 @@ use crate::days::Day;
 pub struct Day19;
 
 type Pos = (i32, i32, i32);
-type Scanner = HashSet<Pos>;
+
+#[derive(Clone)]
+pub struct Scanner {
+  points: HashSet<Pos>,
+  distances: HashSet<i32>,
+}
 
 fn parse_vec3(input: &str) -> IResult<&str, Pos> {
   let (cont, (x, _, y, _, z)) = tuple((i32, tag(","), i32, tag(","), i32))(input)?;
@@ -23,7 +29,23 @@ fn parse_vec3(input: &str) -> IResult<&str, Pos> {
 fn parse_scanner(input: &str) -> IResult<&str, Scanner> {
   let (cont, _) = tuple((tag("--- scanner "), i32, tag(" ---"), newline))(input)?;
   let (cont, poss) = separated_list0(newline, parse_vec3)(cont)?;
-  Ok((cont, HashSet::from_iter(poss)))
+  let points = HashSet::from_iter(poss);
+  let distances = calculate_distances(&points);
+  Ok((cont, Scanner { points, distances }))
+}
+
+fn calculate_distances(points: &HashSet<Pos>) -> HashSet<i32> {
+  points
+    .iter()
+    .combinations(2)
+    .map(|ps| {
+      let dx = ps[0].0 - ps[1].0;
+      let dy = ps[0].1 - ps[1].1;
+      let dz = ps[0].2 - ps[1].2;
+      let dist = (((dx * dx + dy * dy + dz * dz) as f32).sqrt() * 100000.0).round() as i32;
+      dist
+    })
+    .collect()
 }
 
 fn min3((x1, y1, z1): &Pos, (x2, y2, z2): &Pos) -> Pos {
@@ -95,22 +117,26 @@ fn rotate((rx, ry, rz): &Rotation, pos: &Pos) -> Pos {
 
 fn find_overlap(scanner0: &Scanner, scanner1: &Scanner) -> Option<(Pos, Scanner)> {
   let all_rotations = get_all_rotations();
-  for p0 in scanner0 {
-    for p1 in scanner1 {
-      for rotation in &all_rotations {
-        let p_base = rotate(rotation, p1);
-        let p_diff = min3(&p_base, p0);
-        let transformed_slice = scanner1.iter().map(|p| {
-          let p_rotated = rotate(rotation, p);
-          min3(&p_rotated, &p_diff)
-        });
-        if transformed_slice
-          .clone()
-          .filter(|p| scanner0.contains(p))
-          .count()
-          >= 12
-        {
-          return Some((min3(&(0, 0, 0), &p_diff), transformed_slice.collect()));
+  if scanner0.distances.intersection(&scanner1.distances).count() >= 56 {
+    for p0 in scanner0.points.iter().skip(11) {
+      for p1 in scanner1.points.iter().skip(11) {
+        for rotation in &all_rotations {
+          let p_base = rotate(rotation, &p1);
+          let p_diff = min3(&p_base, &p0);
+          let transformed_slice = scanner1.points.iter().map(|p| {
+            let p_rotated = rotate(rotation, p);
+            min3(&p_rotated, &p_diff)
+          });
+          if transformed_slice
+            .clone()
+            .filter(|p| scanner0.points.contains(p))
+            .count()
+            >= 12
+          {
+            let points = transformed_slice.collect();
+            let distances = scanner1.distances.clone();
+            return Some((min3(&(0, 0, 0), &p_diff), Scanner { points, distances }));
+          }
         }
       }
     }
@@ -133,7 +159,8 @@ fn helper(
       None => res.push(s.clone()),
       Some((scanner_pos, s1)) => {
         scanner_positions.push(scanner_pos);
-        total_scanner.extend(&s1);
+        total_scanner.points.extend(&s1.points);
+        total_scanner.distances = calculate_distances(&total_scanner.points);
       }
     }
   }
@@ -148,7 +175,7 @@ fn combine_all(input: &[Scanner]) -> (usize, Vec<Pos>) {
     let new_list = helper(&mut start_scanner, &mut positions, &list);
     list = new_list;
   }
-  (start_scanner.len(), positions)
+  (start_scanner.points.len(), positions)
 }
 
 impl Day for Day19 {
